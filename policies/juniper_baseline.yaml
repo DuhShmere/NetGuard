@@ -1,0 +1,31 @@
+# Juniper Junos Baseline Compliance Policy
+# Each rule maps to a check function in juniper/policy_checks.py
+
+policy_name: Juniper Baseline
+vendor: juniper
+version: "1.0"
+
+rules:
+  - id: JNR-001
+    name: Root authentication configured
+    severity: high
+    description: Root account must have authentication method configured
+    remediation_template: disable_root
+
+  - id: JNR-002
+    name: SSH key authentication
+    severity: medium
+    description: SSH should enforce key-based auth with authentication-order
+    remediation_template: ssh_keys
+
+  - id: JNR-003
+    name: Syslog server configured
+    severity: medium
+    description: At least one remote syslog server must be defined
+    remediation_template: syslog
+
+  - id: JNR-004
+    name: Firewall filter present
+    severity: high
+    description: At least one firewall filter must be defined in config
+    remediation_template: null

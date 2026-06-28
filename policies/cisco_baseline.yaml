@@ -1,0 +1,31 @@
+# Cisco IOS/NX-OS Baseline Compliance Policy
+# Each rule maps to a check function in cisco/policy_checks.py
+
+policy_name: Cisco Baseline
+vendor: cisco
+version: "1.0"
+
+rules:
+  - id: CISCO-001
+    name: SSH version 2
+    severity: high
+    description: Enforce SSH protocol version 2 on all VTY lines
+    remediation_template: ssh_config
+
+  - id: CISCO-002
+    name: Telnet disabled
+    severity: high
+    description: Remove telnet from all VTY transport input lines
+    remediation_template: disable_telnet
+
+  - id: CISCO-003
+    name: NTP server configured
+    severity: medium
+    description: At least one NTP server must be defined
+    remediation_template: ntp_config
+
+  - id: CISCO-004
+    name: No default SNMP community
+    severity: high
+    description: Remove public/private SNMP community strings
+    remediation_template: null
