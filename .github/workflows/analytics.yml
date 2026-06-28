@@ -1,0 +1,69 @@
+name: Analytics — anomaly detection and weekly report
+
+on:
+  schedule:
+    - cron: "0 8 * * *"    # every day at 8am UTC
+  workflow_dispatch:
+
+jobs:
+  analytics:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: netguard
+          POSTGRES_PASSWORD: netguard
+          POSTGRES_DB: netguard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run anomaly detection
+        env:
+          DATABASE_URL: postgresql://netguard:netguard@localhost/netguard
+        run: python -m pipeline.anomaly.detector
+
+      - name: Send anomaly alerts
+        env:
+          DATABASE_URL: postgresql://netguard:netguard@localhost/netguard
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+        run: python -m pipeline.anomaly.alerter
+
+      - name: Generate weekly PDF report
+        env:
+          DATABASE_URL: postgresql://netguard:netguard@localhost/netguard
+        run: python -m pipeline.reports.weekly_report
+
+      - name: Upload PDF report as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: netguard-compliance-report-${{ github.run_number }}
+          path: reports/netguard_weekly_*.pdf
+          retention-days: 30
+
+      - name: Upload anomaly log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: anomaly-log-${{ github.run_number }}
+          path: logs/anomaly_*.log
+          retention-days: 14

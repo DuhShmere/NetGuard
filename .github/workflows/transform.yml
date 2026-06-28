@@ -1,0 +1,66 @@
+name: Transform — stage and load analytics
+
+on:
+  schedule:
+    - cron: "0 * * * *"    # every hour on the hour
+  workflow_dispatch:
+
+jobs:
+  transform:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: netguard
+          POSTGRES_PASSWORD: netguard
+          POSTGRES_DB: netguard
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: "pip"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run schema migrations
+        env:
+          DATABASE_URL: postgresql://netguard:netguard@localhost/netguard
+        run: python -m pipeline.etl.loader --migrate
+
+      - name: Transform raw snapshots
+        env:
+          DATABASE_URL: postgresql://netguard:netguard@localhost/netguard
+        run: python -m pipeline.etl.transformer
+
+      - name: Load analytics layer
+        env:
+          DATABASE_URL: postgresql://netguard:netguard@localhost/netguard
+        run: python -m pipeline.etl.loader
+
+      - name: Run data quality checks
+        env:
+          DATABASE_URL: postgresql://netguard:netguard@localhost/netguard
+        run: python -m pipeline.etl.quality
+
+      - name: Upload transform log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: transform-log-${{ github.run_number }}
+          path: logs/transform_*.log
+          retention-days: 7
