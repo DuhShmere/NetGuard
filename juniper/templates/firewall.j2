@@ -1,0 +1,10 @@
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-SSH from protocol tcp
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-SSH from destination-port 22
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-SSH then accept
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-NETCONF from protocol tcp
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-NETCONF from destination-port 830
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-NETCONF then accept
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-ICMP from protocol icmp
+set firewall family inet filter NETGUARD-PROTECT term ALLOW-ICMP then accept
+set firewall family inet filter NETGUARD-PROTECT term DENY-ALL then discard
+set interfaces {{ interface | default('lo0') }} unit 0 family inet filter input NETGUARD-PROTECT
