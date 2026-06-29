@@ -1,10 +1,7 @@
 name: Transform — stage and load analytics
 
 on:
-  schedule:
-    - cron: "0 * * * *"    # every hour on the hour
   workflow_dispatch:
-
 jobs:
   transform:
     runs-on: ubuntu-latest

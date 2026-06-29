@@ -1,8 +1,6 @@
 name: Analytics — anomaly detection and weekly report
 
 on:
-  schedule:
-    - cron: "0 8 * * *"    # every day at 8am UTC
   workflow_dispatch:
 
 jobs:
