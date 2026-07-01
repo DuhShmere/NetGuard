@@ -28,4 +28,5 @@ rules:
     name: No default SNMP community
     severity: high
     description: Remove public/private SNMP community strings
-    remediation_template: null
+    remediation_template: snmp_config
+    
