@@ -1,0 +1,5 @@
+no snmp-server community public
+no snmp-server community private
+snmp-server community {{ snmp_community | default('NetGuard-SNMP') }} RO
+snmp-server contact NOC-Team
+snmp-server location {{ location | default('Data Center') }}
