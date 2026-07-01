@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-import os, jwt, datetime
+from jose import jwt
+import os, datetime
 
 router = APIRouter()
 SECRET = os.getenv("JWT_SECRET", "change-me-in-production")
@@ -11,7 +12,6 @@ class LoginPayload(BaseModel):
 
 @router.post("/login")
 def login(payload: LoginPayload):
-    # TODO: validate against users table with bcrypt
     if payload.username == "admin" and payload.password == "netguard":
         token = jwt.encode(
             {"sub": payload.username, "exp": datetime.datetime.utcnow() + datetime.timedelta(hours=8)},
