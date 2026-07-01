@@ -28,4 +28,4 @@ rules:
     name: Firewall filter present
     severity: high
     description: At least one firewall filter must be defined in config
-    remediation_template: null
+    remediation_template: firewall
