@@ -1,6 +1,6 @@
 """
 pipeline/anomaly/detector.py
-Runs Z-score anomaly detection on per-device compliance scores.
+Runs Z-score anomaly detection on 7-day compliance history per device.
 Flags devices whose score has dropped unusually fast compared to
 their rolling 7-day average. Results written to anomaly_alerts table.
 """
@@ -18,12 +18,14 @@ logging.basicConfig(
 )
 log = logging.getLogger(__name__)
 
-DATABASE_URL = os.environ["DATABASE_URL"]
+DATABASE_URL = os.environ.get(
+    "DATABASE_URL",
+    "postgresql://netguard:netguard@localhost/netguard"
+)
 engine = create_engine(DATABASE_URL)
 
-Z_SCORE_THRESHOLD = 2.0   # flag if score drops more than 2 std deviations
-MIN_HISTORY_DAYS  = 3     # need at least 3 days of history to detect anomalies
-
+Z_SCORE_THRESHOLD = 2.0
+MIN_HISTORY_DAYS  = 3
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS anomaly_alerts (
@@ -31,7 +33,7 @@ CREATE TABLE IF NOT EXISTS anomaly_alerts (
     device_id    INTEGER,
     hostname     TEXT,
     vendor       TEXT,
-    alert_type   TEXT,   -- 'score_drop', 'violation_spike', 'new_violation'
+    alert_type   TEXT,
     detail       JSONB,
     detected_at  TIMESTAMPTZ DEFAULT NOW(),
     acknowledged BOOLEAN DEFAULT FALSE
@@ -46,7 +48,6 @@ def ensure_table():
 
 
 def get_device_history():
-    """Return last 7 days of daily scores per device."""
     with engine.connect() as conn:
         result = conn.execute(text("""
             SELECT device_id, hostname, vendor, report_date, avg_score, violations
@@ -57,7 +58,7 @@ def get_device_history():
         return result.mappings().all()
 
 
-def compute_z_score(values: list[float]) -> float:
+def compute_z_score(values: list) -> float:
     if len(values) < 2:
         return 0.0
     mean = sum(values) / len(values)
@@ -74,13 +75,13 @@ def store_alert(device_id: int, hostname: str, vendor: str,
     with engine.connect() as conn:
         conn.execute(text("""
             INSERT INTO anomaly_alerts (device_id, hostname, vendor, alert_type, detail)
-            VALUES (:device_id, :hostname, :vendor, :alert_type, :detail::jsonb)
+            VALUES (:device_id, :hostname, :vendor, :alert_type, CAST(:detail AS jsonb))
         """), {
-            "device_id": device_id,
-            "hostname": hostname,
-            "vendor": vendor,
+            "device_id":  device_id,
+            "hostname":   hostname,
+            "vendor":     vendor,
             "alert_type": alert_type,
-            "detail": json.dumps(detail),
+            "detail":     json.dumps(detail),
         })
         conn.commit()
 
@@ -90,7 +91,7 @@ def run():
     rows = get_device_history()
 
     # Group by device
-    devices: dict[int, list] = {}
+    devices: dict = {}
     for row in rows:
         devices.setdefault(row["device_id"], []).append(row)
 
@@ -100,18 +101,18 @@ def run():
         if len(history) < MIN_HISTORY_DAYS:
             continue
 
-        hostname = history[-1]["hostname"]
-        vendor   = history[-1]["vendor"]
-        scores   = [float(r["avg_score"]) for r in history]
+        hostname   = history[-1]["hostname"]
+        vendor     = history[-1]["vendor"]
+        scores     = [float(r["avg_score"]) for r in history]
         violations = [int(r["violations"]) for r in history]
 
         # Score drop anomaly
         z = compute_z_score(scores)
         if z < -Z_SCORE_THRESHOLD:
             detail = {
-                "z_score": round(z, 2),
+                "z_score":      round(z, 2),
                 "latest_score": round(scores[-1], 1),
-                "7day_avg": round(sum(scores[:-1]) / len(scores[:-1]), 1),
+                "7day_avg":     round(sum(scores[:-1]) / len(scores[:-1]), 1),
             }
             store_alert(device_id, hostname, vendor, "score_drop", detail)
             log.warning(f"ANOMALY score_drop: {hostname} z={z:.2f} score={scores[-1]:.1f}")
@@ -121,9 +122,9 @@ def run():
         vz = compute_z_score([float(v) for v in violations])
         if vz > Z_SCORE_THRESHOLD:
             detail = {
-                "z_score": round(vz, 2),
+                "z_score":           round(vz, 2),
                 "latest_violations": violations[-1],
-                "7day_avg": round(sum(violations[:-1]) / len(violations[:-1]), 1),
+                "7day_avg":          round(sum(violations[:-1]) / len(violations[:-1]), 1),
             }
             store_alert(device_id, hostname, vendor, "violation_spike", detail)
             log.warning(f"ANOMALY violation_spike: {hostname} z={vz:.2f} violations={violations[-1]}")
