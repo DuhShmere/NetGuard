@@ -11,3 +11,4 @@ build/
 .mypy_cache/
 *.log
 pg_data/
+reports/
