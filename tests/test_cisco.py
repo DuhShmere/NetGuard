@@ -5,6 +5,9 @@ COMPLIANT_CONFIG = """
 ip ssh version 2
 ntp server 10.0.0.1
 no ip http server
+snmp-server community NetGuard-SNMP RO
+line vty 0 15
+ transport input ssh
 """
 
 NON_COMPLIANT_CONFIG = """
@@ -27,3 +30,17 @@ def test_default_snmp_detected():
     violations = run_all_checks(NON_COMPLIANT_CONFIG)
     ids = [v["rule_id"] for v in violations]
     assert "CISCO-004" in ids
+
+def test_missing_ssh_version_flagged():
+    violations = run_all_checks(NON_COMPLIANT_CONFIG)
+    ids = [v["rule_id"] for v in violations]
+    assert "CISCO-001" in ids
+
+def test_missing_ntp_flagged():
+    violations = run_all_checks(NON_COMPLIANT_CONFIG)
+    ids = [v["rule_id"] for v in violations]
+    assert "CISCO-003" in ids
+
+def test_fully_compliant_no_violations():
+    violations = run_all_checks(COMPLIANT_CONFIG)
+    assert violations == []
