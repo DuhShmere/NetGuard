@@ -29,4 +29,10 @@ rules:
     severity: high
     description: Remove public/private SNMP community strings
     remediation_template: snmp_config
+
+    - id: CISCO-005
+    name: ACL defined
+    severity: medium
+    description: At least one access control list must be defined on the device
+    remediation_template: null
     

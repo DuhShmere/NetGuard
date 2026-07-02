@@ -2,7 +2,6 @@
 Evaluate a Cisco running config against compliance rules.
 Returns a list of violation dicts: {rule_id, severity, description}
 """
-
 def check_ssh_version(config: str) -> dict | None:
     if "ip ssh version 2" not in config:
         return {"rule_id": "CISCO-001", "severity": "high",
@@ -23,6 +22,11 @@ def check_snmp_community(config: str) -> dict | None:
         return {"rule_id": "CISCO-004", "severity": "high",
                 "description": "Default SNMP community string in use"}
 
+def check_acl(config: str) -> dict | None:
+    if "ip access-list" not in config:
+        return {"rule_id": "CISCO-005", "severity": "medium",
+                "description": "No ACL defined on device"}
+
 def run_all_checks(config: str) -> list:
-    checks = [check_ssh_version, check_telnet_disabled, check_ntp, check_snmp_community]
+    checks = [check_ssh_version, check_telnet_disabled, check_ntp, check_snmp_community, check_acl]
     return [v for c in checks if (v := c(config)) is not None]

@@ -8,6 +8,10 @@ no ip http server
 snmp-server community NetGuard-SNMP RO
 line vty 0 15
  transport input ssh
+ip access-list extended NETGUARD-ACL
+ permit tcp any any eq 22
+ permit icmp any any
+ deny ip any any
 """
 
 NON_COMPLIANT_CONFIG = """
